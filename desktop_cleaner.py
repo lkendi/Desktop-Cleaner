@@ -33,9 +33,6 @@ def move_file(source, destination):
         if os.path.isfile(source):
             if not os.path.exists(destination):
                 shutil.move(source, destination)
-                print(f"Moving {os.path.basename(source)} to {destination}...")
-            else:
-                pass
     except Exception as e:
         print(f"Error moving file: {e}")
 
@@ -57,8 +54,10 @@ def organize_desktop():
                             source_path = os.path.join(root, item)
                             dest_path = os.path.join(dest_dir, item)
                             if not os.path.exists(dest_path):
+                                print("Moving files...")
                                 move_file(source_path, dest_path)
                                 matched = True
+                                files_moved = True
                             sort_by_keyword(dest_dir)
                             break
 
@@ -68,13 +67,16 @@ def organize_desktop():
                         source_path = os.path.join(parent_dir, item)
                         dest_path = os.path.join(dest_dir, item)
                         if not os.path.exists(dest_path):
+                            print("Moving files...")
                             move_file(source_path, dest_path)
+                            files_moved = True
                         sort_by_keyword(dest_dir)
                 if not files_moved:
                     print("Your desktop appears to be organized already.")
                     break
                 else:
                     print("Organization complete!")
+                    break
     except Exception as e:
         print(f"An error occurred during organization: {e}")
 
@@ -99,6 +101,7 @@ def sort_by_keyword(directory):
                 for file in files:
                     source_path = file
                     dest_path = os.path.join(keyword_dir, os.path.basename(file))
+                    print("Moving files...")
                     move_file(source_path, dest_path)
     except Exception as e:
         print(f"An error occurred during sorting: {e}")
