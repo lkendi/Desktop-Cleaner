@@ -59,7 +59,6 @@ def organize_desktop():
                             source_path = os.path.join(root, item)
                             dest_path = os.path.join(dest_dir, item)
                             if not os.path.exists(dest_path):
-                                print("Moving files...")
                                 move_file(source_path, dest_path)
                                 matched = True
                                 files_moved = True
@@ -72,7 +71,6 @@ def organize_desktop():
                         source_path = os.path.join(parent_dir, item)
                         dest_path = os.path.join(dest_dir, item)
                         if not os.path.exists(dest_path):
-                            print("Moving files...")
                             move_file(source_path, dest_path)
                             files_moved = True
                         sort_by_keyword(dest_dir)
@@ -106,7 +104,6 @@ def sort_by_keyword(directory):
                 for file in files:
                     source_path = file
                     dest_path = os.path.join(keyword_dir, os.path.basename(file))
-                    print("Moving files...")
                     move_file(source_path, dest_path)
     except Exception as e:
         print(f"An error occurred during sorting: {e}")
