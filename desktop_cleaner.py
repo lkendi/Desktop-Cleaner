@@ -1,7 +1,8 @@
-import os
-import shutil
+from drive_backup import upload
 from nltk.tokenize import word_tokenize
 from nltk.tag import pos_tag
+import os
+import shutil
 
 parent_dir = os.path.expanduser("~/Desktop")
 files_dict = {
@@ -41,6 +42,10 @@ def organize_desktop():
     """Organizes files in the desktop by grouping by
     different file extensions"""
     try:
+        print("----------------------------------------------------------")
+        print("------------------ Desktop Organization ------------------")
+        print("----------------------------------------------------------")
+
         if os.path.exists(parent_dir):
             files_moved = False
             for root, _, files in os.walk(parent_dir):
@@ -123,8 +128,11 @@ def extract_keywords(filename):
         return []
 
 
-
-
 if __name__ == "__main__":
     """Entry point"""
     organize_desktop()
+    backup_choice = input("Would you like to back up your files to Google Drive (y/n): ")
+    if backup_choice == 'y':
+        upload()
+    elif backup_choice == 'n':
+        print("Backup skipped. Have a productive day!")
