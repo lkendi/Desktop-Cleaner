@@ -8,7 +8,6 @@ from tqdm import tqdm
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
-
 def authenticate():
     """Retrieve credentials for Google Drive API"""
     if os.path.exists("token.json"):
@@ -30,18 +29,45 @@ def authenticate():
     return service
 
 
-def upload_recursive(service, directory, parent_folder_id=None):
+def upload_recursive(service, directory, uploaded_files, parent_folder_id=None):
     """Uploads subdirectories of the given directory to Google Drive"""
     for root, dirs, files in os.walk(directory):
+        current_parent_folder_id = parent_folder_id
+
         for file in files:
             file_path = os.path.join(root, file)
-            upload_file(service, file_path, parent_folder_id)
-            tqdm.write(f"Uploading {file_path}")
+            if file_path not in uploaded_files:
+                upload_file(service, file_path, current_parent_folder_id)
+                uploaded_files.add(file_path)
+                tqdm.write(f"Uploading {file_path}")
 
         for subdir in dirs:
             subdir_path = os.path.join(root, subdir)
-            upload_folder(service, subdir_path, parent_folder_id)
+            subdir_name = os.path.relpath(subdir_path, directory)
+            folder_id = create_subdirectory(service, subdir_name, current_parent_folder_id)
+            upload_recursive(service, subdir_path, uploaded_files, folder_id)
 
+
+
+
+def create_subdirectory(service, subdir_name, parent_folder_id=None):
+  """Creates a subdirectory folder in Google Drive (if it doesn't exist)"""
+  query = f"name='{subdir_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+  if parent_folder_id:
+    query += f" and '{parent_folder_id}' in parents"
+  response = service.files().list(q=query).execute()
+  existing_folders = response.get('files', [])
+  if existing_folders:
+    return existing_folders[0]['id']
+  else:
+    folder_metadata = {
+      'name': subdir_name,
+      'mimeType': 'application/vnd.google-apps.folder'
+    }
+    if parent_folder_id:
+      folder_metadata['parents'] = [parent_folder_id]
+    folder = service.files().create(body=folder_metadata, fields='id').execute()
+    return folder.get('id')
 
 def upload_file(service, file_path, parent_folder_id=None):
     """Uploads a file to Google Drive"""
@@ -56,15 +82,25 @@ def upload_file(service, file_path, parent_folder_id=None):
 def upload_folder(service, folder_path, parent_folder_id=None):
     """Uploads a folder to Google Drive"""
     folder_name = os.path.basename(folder_path)
-    folder_metadata = {
-        'name': folder_name,
-        'mimeType': 'application/vnd.google-apps.folder'
-    }
+    query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
     if parent_folder_id:
-        folder_metadata['parents'] = [parent_folder_id]
+        query += f" and '{parent_folder_id}' in parents"
+    response = service.files().list(q=query).execute()
+    existing_folders = response.get('files', [])
+    if existing_folders:
+        folder_id = existing_folders[0]['id']
+    else:
+        folder_metadata = {
+            'name': folder_name,
+            'mimeType': 'application/vnd.google-apps.folder'
+        }
+        if parent_folder_id:
+            folder_metadata['parents'] = [parent_folder_id]
 
-    folder = service.files().create(body=folder_metadata, fields='id').execute()
-    upload_recursive(service, folder_path, folder.get('id'))
+        folder = service.files().create(body=folder_metadata, fields='id').execute()
+        folder_id = folder.get('id')
+
+    return folder_id
 
 
 def upload():
@@ -72,13 +108,13 @@ def upload():
     print("----------------------------------------------------------")
     print("---------------------- Drive Backup ----------------------")
     print("----------------------------------------------------------")
-    desktop_path = os.path.join(os.path.expanduser('~'), 'Desktop')
+    desktop_path = os.path.expanduser('~/Desktop')
     service = authenticate()
     folder_name = 'Desktop Backup'
     backup_folder_id = create_backup_folder(service, folder_name)
-    upload_recursive(service, desktop_path, backup_folder_id)
-    print("Backup complete.")
-
+    uploaded_files = set()
+    upload_recursive(service, desktop_path, uploaded_files, backup_folder_id)
+    print("Backup complete!")
 
 def create_backup_folder(service, folder_name):
     """Creates or retrieves the backup folder in Google Drive"""
@@ -95,7 +131,6 @@ def create_backup_folder(service, folder_name):
         return folder.get('id')
     else:
         return items[0]['id']
-
 
 if __name__ == "__main__":
     upload()
